@@ -9,6 +9,7 @@
 "   - enable spell checking in comments and strings only
 "   - FFI highlighting
 "   - QuasiQuotation
+"   - top level Template Haskell slices
 "   - PackageImport
 "
 " TODO: find out which vim versions are still supported
@@ -47,7 +48,8 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syntax sync fromstart "mmhhhh.... is this really ok to do so?
+"syntax sync fromstart "mmhhhh.... is this really ok to do so?
+syntax sync linebreaks=15 minlines=50 maxlines=500
 
 syn match  hsSpecialChar	contained "\\\([0-9]\+\|o[0-7]\+\|x[0-9a-fA-F]\+\|[\"\\'&\\abfnrtv]\|^[A-Z^_\[\\\]]\)"
 syn match  hsSpecialChar	contained "\\\(NUL\|SOH\|STX\|ETX\|EOT\|ENQ\|ACK\|BEL\|BS\|HT\|LF\|VT\|FF\|CR\|SO\|SI\|DLE\|DC1\|DC2\|DC3\|DC4\|NAK\|SYN\|ETB\|CAN\|EM\|SUB\|ESC\|FS\|GS\|RS\|US\|SP\|DEL\)"
@@ -68,6 +70,12 @@ syn match hsConSym "\(\<[A-Z][a-zA-Z0-9_']*\.\)\=:[-!#$%&\*\+./<=>\?@\\^|~:]*"
 syn match hsVarSym "`\(\<[A-Z][a-zA-Z0-9_']*\.\)\=[a-z][a-zA-Z0-9_']*`"
 syn match hsConSym "`\(\<[A-Z][a-zA-Z0-9_']*\.\)\=[A-Z][a-zA-Z0-9_']*`"
 
+" Toplevel Template Haskell support
+"sy match hsTHTopLevel "^[a-z]\(\(.\&[^=]\)\|\(\n[^a-zA-Z0-9]\)\)*"
+sy match hsTHIDTopLevel "^[a-z]\S*" 
+sy match hsTHTopLevel "^\$(\?" nextgroup=hsTHTopLevelName 
+sy match hsTHTopLevelName "[a-z]\S*" contained
+
 " Reserved symbols--cannot be overloaded.
 syn match hsDelimiter  "(\|)\|\[\|\]\|,\|;\|_\|{\|}"
 
@@ -84,7 +92,8 @@ sy match hs_InfixOpFunctionName "^\(\(\w\|[[\]{}]\)\+\|\(\".*\"\)\|\('.*'\)\)\s*
     \ contained contains=hs_HlInfixOp,hsCharacter
 
 sy match hs_OpFunctionName        "(\(\W\&[^(),\"]\)\+)" contained
-sy region hs_Function start="^["'a-z_([{]" end="=\(\s\|\n\|\w\|[([]\)" keepend extend
+"sy region hs_Function start="^["'a-z_([{]" end="=\(\s\|\n\|\w\|[([]\)" keepend extend
+sy region hs_Function start="^["'a-zA-Z_([{]\(\(.\&[^=]\)\|\(\n\s\)\)*=" end="\(\s\|\n\|\w\|[([]\)" keepend extend
         \ contains=hs_OpFunctionName,hs_InfixOpFunctionName,hs_InfixFunctionName,hs_FunctionName,hsType,hsConSym,hsVarSym,hsString,hsCharacter
 
 sy match hs_DeclareFunction "^[a-z_(]\S*\(\s\|\n\)*::" contains=hs_FunctionName,hs_OpFunctionName
@@ -145,12 +154,6 @@ sy match hsFFI excludenl "\<foreign\>\(.\&[^\"]\)*\"\(.\)*\"\(\s\|\n\)*\(.\)*::"
   \ keepend
   \ contains=hsFFIForeign,hsFFIImportExport,hsFFICallConvention,hsFFISafety,hsFFIString,hs_OpFunctionName,hs_hlFunctionName
 
-" QuasiQuotation
-sy region hsQQ start="\[\$" end="|\]" keepend contains=hsQQVarID,hsQQEnd,hsQQContent
-sy match hsQQContent ".*"me=e-2 contained
-sy match hsQQEnd "|\]" contained
-sy match hsQQVarID "\[\$\(.\&[^|]\)*|" contained
-
 " hsModule regex MUST match all possible symbols between 'module' and 'where'
 " else overlappings with other syntax elements will break correct hsModule 
 " syntax highliting or evaluation of regex will stall vim.
@@ -181,12 +184,16 @@ sy match   hsLineComment      "---*\([^-!#$%&\*\+./<=>\?@\\^|~].*\)\?$" contains
 sy region  hsBlockComment     start="{-"  end="-}" contains=hsBlockComment,hsCommentTodo,@Spell
 sy region  hsPragma	       start="{-#" end="#-}"
 
+" QuasiQuotation
+sy region hsQQ start="\[\$" end="|\]"me=e-2 keepend contains=hsQQVarID,hsQQContent nextgroup=hsQQEnd
+sy match hsQQContent ".*" contained
+sy match hsQQEnd "|\]" contained
+sy match hsQQVarID "\[\$\(.\&[^|]\)*|" contained
 
 if exists("hs_highlight_debug")
   " Debugging functions from the standard prelude.
   syn keyword hsDebug undefined error trace
 endif
-
 
 
 " C Preprocessor directives. Shamelessly ripped from c.vim and trimmed
@@ -287,6 +294,9 @@ if version >= 508 || !exists("did_hs_syntax_inits")
   HiLink hsFFIImportExport  Structure
   HiLink hsFFICallConvention Keyword
   HiLink hsFFISafety         Keyword
+
+  HiLink hsTHIDTopLevel   Macro
+  HiLink hsTHTopLevelName Macro
 
   HiLink hsQQVarID Keyword
   HiLink hsQQEnd   Keyword
